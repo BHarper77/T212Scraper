@@ -1,4 +1,4 @@
-import { Locator, Page } from "playwright";
+import { Locator, Page } from "playwright"
 
 /** Helper class for scraping individual investments */
 export default class InvestmentScraper {
@@ -17,6 +17,7 @@ export default class InvestmentScraper {
 	/** Finds and parses the current investments total return */
 	public async getTotalReturn(selector: string): Promise<number> {
 		const stockReturn = await this._currentInvestment.locator(selector).textContent() ?? ""
+		
 		const stockReturnSplit = stockReturn.split(" ")
 			// only include values with currency symbols
 			.filter((value) => value.includes("£") || value.includes("$"))	
@@ -33,6 +34,7 @@ export default class InvestmentScraper {
 	/** Finds and parses the current investments percentage return */
 	public async getReturnPercentage(selector: string): Promise<number> {
 		const stockReturn = await this._currentInvestment.locator(selector).textContent() ?? ""
+
 		const stockReturnSplit = stockReturn.split(" ")
 			// only include values with percentage symbols
 			.filter((value) => value.includes("%"))	
