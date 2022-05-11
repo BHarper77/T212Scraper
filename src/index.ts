@@ -1,6 +1,7 @@
 import dotenv from "dotenv"
 import { join } from "path"
 import { chromium, ElementHandle } from "playwright"
+import InvestmentScraper from "./lib/scraper/Scraper"
 import { PortfolioData } from "./models/PortfolioData"
 import { Positions } from "./models/Positions"
 import staticData from "./static.json"
@@ -22,6 +23,8 @@ import staticData from "./static.json"
 
 	const portfolioData = await scrapeData(username, password)
 		.catch((error) => console.log(error))
+
+	console.log({ portfolioData })
 })()
 
 async function scrapeData(username: string, password: string): Promise<PortfolioData> {
@@ -56,7 +59,10 @@ async function scrapeData(username: string, password: string): Promise<Portfolio
 
 	const positions: Array<Positions> = []
 
+	const investmentScraper = new InvestmentScraper(investments)
+
 	for (let i = 0; i < investmentsCount; i++) {
+		investmentScraper.currentInvestment = i
 		const currentInvestment = investments.nth(i)
 		
 		// need to click on each investment to get details
@@ -122,8 +128,6 @@ async function scrapeData(username: string, password: string): Promise<Portfolio
 		TotalInvestments: investmentsCount
 	}
 
-	console.log({ portfolioData })
-	
 	await page.close()
 	await browser.close()
 
