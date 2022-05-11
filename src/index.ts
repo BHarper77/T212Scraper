@@ -1,6 +1,6 @@
 import dotenv from "dotenv"
 import { join } from "path"
-import { chromium } from "playwright"
+import { chromium, ElementHandle } from "playwright"
 import { PortfolioData } from "./models/PortfolioData"
 import { Positions } from "./models/Positions"
 import staticData from "./static.json"
@@ -20,7 +20,8 @@ import staticData from "./static.json"
 		throw new Error("Username or password is undefined")
 	}
 
-	await scrapeData(username, password)
+	const portfolioData = await scrapeData(username, password)
+		.catch((error) => console.log(error))
 })()
 
 async function scrapeData(username: string, password: string): Promise<PortfolioData> {
@@ -44,56 +45,87 @@ async function scrapeData(username: string, password: string): Promise<Portfolio
 	await page.type("[name='email']", username)
 	await page.type("[name='password']", password)
 
-	await page.click(".submit-button_input__3s_QD")
-
-	await page.close()
-	await browser.close()
+	await Promise.all([
+		page.click(".submit-button_input__3s_QD"),
+		page.waitForNavigation({ waitUntil: "networkidle" })
+	])
 
 	// loop through portfolio holdings
 	const investments = page.locator(".investments-section .highlight-container")
-	
-	const elements = await investments.evaluateAll((elements) => elements)
+	const investmentsCount = await investments.count()
+
 	const positions: Array<Positions> = []
 
-	for (const [index, element] of elements.entries()) {
-		// TODO: check if current ticker is in skip list
+	for (let i = 0; i < investmentsCount; i++) {
+		const currentInvestment = investments.nth(i)
+		
+		// need to click on each investment to get details
+		await currentInvestment.click()
 
-		// return metrics displayed in format "+£363.57 (15.26%)", need to parse
-		const stockReturn = element.querySelector(".return")?.textContent
-		const stockReturnSplit = stockReturn?.split(" ") ?? [null, null]
-		const [totalReturn, percentageReturn] = stockReturnSplit.map((value) => parseFloat(value ?? ""))
+		// parse return metrics, displayed in format "+£363.57 (15.26%)"
+		const stockReturn = await currentInvestment.locator(".return").textContent() ?? ""
+		const stockReturnSplit = stockReturn.split(" ").map((value) => {
+			// parse and convert values
+			const parsedValue = value.replace(/[()%£$]/g, "")
+			return parseFloat(parsedValue)
+		})
 
-		// have to click on each element to get dividend yield
-		await investments.nth(index).click()
-		const dividendYield = parseFloat(await page.locator(".company-details [data-qa-key-ratios='dividendYield']").textContent() ?? "")
+		// handle negative returns, percentage isn't displayed as negative
+		let [totalReturn, percentageReturn] = stockReturnSplit
+		totalReturn < 0 ? percentageReturn = 0 - percentageReturn : percentageReturn
+
+		// dividend info is retrieved from details section
+		const dividendYield = parseFloat(await page.locator(".company-details [data-qa-key-ratios='dividendYield']").textContent({ timeout: 5000 })
+			.catch((error) => {
+				console.log("Error extracting dividend yield. This might be due to ETFs not displaying dividend yield info:", error)
+				return "0"
+			}) ?? "".replace(/[%]/g, ""))
 
 		positions.push({
-			Name: element.querySelector(".instrument-name")?.textContent ?? "",
-			Ticker: element.querySelector(".investment-item")?.getAttribute("data-qa-item") ?? "",
-			TotalValue: parseFloat(element.querySelector(".total-value")?.textContent ?? ""),
-			TotalShares: parseFloat(element.querySelector(".quantity")?.textContent ?? ""),
-			TotalReturn: totalReturn ?? 0,
-			PercentageReturn: percentageReturn ?? 0,
-			DividendYield: dividendYield ?? 0
+			Name: await currentInvestment.locator(".instrument-name").textContent() ?? "",
+			Ticker: await currentInvestment.locator(".investment-item").getAttribute("data-qa-item") ?? "",
+			TotalValue: parseFloat(await currentInvestment.locator(".total-value").textContent() ?? ""),
+			TotalShares: parseFloat(await currentInvestment.locator(".quantity").textContent() ?? ""),
+			TotalReturn: totalReturn,
+			PercentageReturn: percentageReturn,
+			DividendYield: dividendYield
 		})
-	}	
+	}
 
-	// return metrics displayed in format "+£363.57 (15.26%)", need to parse
 	const portfolioSummary = page.locator(".portfolio-summary")
-	const portfolioReturn = await portfolioSummary.locator("data-qa-portfolio-return='portfolio -return'").textContent()
-	const portfolioReturnSplit = portfolioReturn?.split(" ") ?? [null, null]
-	const [totalReturn, percentageReturn] = portfolioReturnSplit.map((value) => parseFloat(value ?? ""))
+	
+	// parse return metrics, displayed in format "+£363.57 (15.26%)"
+	const portfolioReturn = await portfolioSummary.locator("[data-qa-portfolio-return='portfolio-return'] .value").textContent() ?? ""
+	const portfolioReturnSplit = portfolioReturn.split(" ").map((value) => {
+		// parse and convert values
+		const parsedValue = value.replace(/[()%£$]/g, "")
+		return parseFloat(parsedValue)
+	})
 
-	const totalValue = parseFloat(await portfolioSummary.locator(".formatted-price-part").nth(1).textContent() ?? "")
+	// handle negative returns, percentage isn't displayed as negative
+	let [totalReturn, percentageReturn] = portfolioReturnSplit
+	totalReturn < 0 ? percentageReturn = 0 - percentageReturn : percentageReturn
+
+	const totalValue = await portfolioSummary.locator(".formatted-price").textContent() ?? ""
+	const parsedTotalValue = parseFloat(totalValue.replace(/[£%,]/g, ""))
+
+	const totalInvested = await portfolioSummary.locator("[data-qa-portfolio-invested='portfolio-invested'] .value").textContent() ?? ""
+	const parsedTotalInvested = parseFloat(totalInvested.replace(/[£%,]/g, ""))
 
 	const portfolioData: PortfolioData = {
-		TotalValue: totalValue,
-		TotalInvested: parseFloat(await portfolioSummary.locator("[data-qa-portfolio-invested='portfolio - invested']").textContent() ?? ""),
+		TotalValue: parsedTotalValue,
+		TotalInvested: parsedTotalInvested,
 		TotalReturn: totalReturn,
 		PercentageReturn: percentageReturn,
-		DividendYield: (staticData.AnnualDividendIncome / totalValue) * 100,
-		Positions: positions
+		DividendYield: parseFloat(((staticData.AnnualDividendIncome / parsedTotalValue) * 100).toFixed(2)),
+		Positions: positions,
+		TotalInvestments: investmentsCount
 	}
+
+	console.log({ portfolioData })
+	
+	await page.close()
+	await browser.close()
 
 	return portfolioData
 }

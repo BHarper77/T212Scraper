@@ -7,4 +7,5 @@ export interface PortfolioData {
 	PercentageReturn: number
 	DividendYield: number
 	Positions: Array<Positions>
+	TotalInvestments: number
 }
