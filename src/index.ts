@@ -1,21 +1,17 @@
 import dotenv from "dotenv"
 import { join } from "path"
-import { chromium, ElementHandle } from "playwright"
+import { chromium } from "playwright"
 import InvestmentScraper from "./lib/scraper/Scraper"
 import { PortfolioData } from "./models/PortfolioData"
 import { Positions } from "./models/Positions"
 import staticData from "./static.json"
+import { writeFile } from "fs/promises"
 
 (async () => {
 	// retrieve login details from config.env
-	// login to t212 using Playwright
-	// scrape portfolio data (names, tickers, number of shares, position value)
-	// perform calculations on data (dividend yield)
-
 	dotenv.config({ path: join(__dirname, "..", "config.env") })
 
-	const username = process.env.T212USERNAME
-	const password = process.env.T212PASSWORD
+	const { T212USERNAME: username, T212PASSWORD: password } = process.env
 
 	if (username === undefined || password === undefined) {
 		throw new Error("Username or password is undefined")
@@ -24,7 +20,9 @@ import staticData from "./static.json"
 	const portfolioData = await scrapeData(username, password)
 		.catch((error) => console.log(error))
 
-	console.log({ portfolioData })
+	// write portfolio data to JSON file
+	await writeFile(join(__dirname, "..", "portfolioData.json"), JSON.stringify(portfolioData), "utf8")
+		.catch((error) => console.log("Error writing output to JSON file:", error))
 })()
 
 async function scrapeData(username: string, password: string): Promise<PortfolioData> {
@@ -62,39 +60,27 @@ async function scrapeData(username: string, password: string): Promise<Portfolio
 	const investmentScraper = new InvestmentScraper(investments)
 
 	for (let i = 0; i < investmentsCount; i++) {
-		investmentScraper.currentInvestment = i
-		const currentInvestment = investments.nth(i)
-		
-		// need to click on each investment to get details
-		await currentInvestment.click()
+		await investmentScraper.setCurrentInvestment(i)
 
-		// parse return metrics, displayed in format "+£363.57 (15.26%)"
-		const stockReturn = await currentInvestment.locator(".return").textContent() ?? ""
-		const stockReturnSplit = stockReturn.split(" ").map((value) => {
-			// parse and convert values
-			const parsedValue = value.replace(/[()%£$]/g, "")
-			return parseFloat(parsedValue)
-		})
+		const totalReturn = await investmentScraper.getTotalReturn(".return")
+		let percentageReturn = await investmentScraper.getPercentageReturn(".return")
 
 		// handle negative returns, percentage isn't displayed as negative
-		let [totalReturn, percentageReturn] = stockReturnSplit
 		totalReturn < 0 ? percentageReturn = 0 - percentageReturn : percentageReturn
 
-		// dividend info is retrieved from details section
-		const dividendYield = parseFloat(await page.locator(".company-details [data-qa-key-ratios='dividendYield']").textContent({ timeout: 5000 })
-			.catch((error) => {
-				console.log("Error extracting dividend yield. This might be due to ETFs not displaying dividend yield info:", error)
-				return "0"
-			}) ?? "".replace(/[%]/g, ""))
+		const currentInvestment = investmentScraper.currentInvestment
+
+		const totalValue = await currentInvestment.locator(".total-value").textContent() ?? ""
+		const parsedTotalValue = parseFloat(totalValue.replace(/[$£]/g, ""))
 
 		positions.push({
 			Name: await currentInvestment.locator(".instrument-name").textContent() ?? "",
-			Ticker: await currentInvestment.locator(".investment-item").getAttribute("data-qa-item") ?? "",
-			TotalValue: parseFloat(await currentInvestment.locator(".total-value").textContent() ?? ""),
+			Ticker: await investmentScraper.getTicker(".investment-item", "data-qa-item"),
+			TotalValue: parsedTotalValue,
 			TotalShares: parseFloat(await currentInvestment.locator(".quantity").textContent() ?? ""),
 			TotalReturn: totalReturn,
 			PercentageReturn: percentageReturn,
-			DividendYield: dividendYield
+			DividendYield: await investmentScraper.getDividendYield(page, ".company-details [data-qa-key-ratios='dividendYield'] .value")
 		})
 	}
 
@@ -124,8 +110,8 @@ async function scrapeData(username: string, password: string): Promise<Portfolio
 		TotalReturn: totalReturn,
 		PercentageReturn: percentageReturn,
 		DividendYield: parseFloat(((staticData.AnnualDividendIncome / parsedTotalValue) * 100).toFixed(2)),
-		Positions: positions,
-		TotalInvestments: investmentsCount
+		TotalInvestments: investmentsCount,
+		Positions: positions
 	}
 
 	await page.close()

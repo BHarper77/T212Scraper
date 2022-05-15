@@ -6,6 +6,6 @@ export interface PortfolioData {
 	TotalReturn: number
 	PercentageReturn: number
 	DividendYield: number
-	Positions: Array<Positions>
 	TotalInvestments: number
+	Positions: Array<Positions>
 }

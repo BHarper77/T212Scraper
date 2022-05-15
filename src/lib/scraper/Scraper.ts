@@ -10,8 +10,20 @@ export default class InvestmentScraper {
 		this._currentInvestment = investmentsLocator.nth(0)
 	}
 	
-	public set currentInvestment(index : number) {
+	public get currentInvestment(): Locator {
+		return this._currentInvestment
+	}
+
+	/** Sets the current investment target, and clicks on the selector */
+	public async setCurrentInvestment(index : number) {
 		this._currentInvestment = this._investmentsLocator.nth(index)
+		await this._currentInvestment.click()
+	}
+
+	/** Finds and parser the current investment's ticker */
+	public async getTicker(selector: string, attribute: string): Promise<string> {
+		const ticker = await this._currentInvestment.locator(selector).getAttribute(attribute) ?? ""
+		return ticker.split("_")[0]
 	}
 
 	/** Finds and parses the current investments total return */
@@ -32,7 +44,7 @@ export default class InvestmentScraper {
 	}
 
 	/** Finds and parses the current investments percentage return */
-	public async getReturnPercentage(selector: string): Promise<number> {
+	public async getPercentageReturn(selector: string): Promise<number> {
 		const stockReturn = await this._currentInvestment.locator(selector).textContent() ?? ""
 
 		const stockReturnSplit = stockReturn.split(" ")

@@ -1,5 +1,6 @@
 # node
 node_modules
 
-# src
+# T212 data
 config.env
+portfolioData.json
