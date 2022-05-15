@@ -1,7 +1,7 @@
 
 # T212Scraper
 
-## Prequesites
+## Prerequisites
 1. Create a `config.env` file in root directory
 2. Add your T212 username and password to this file under the following variables
 	a. `T212USERNAME`
