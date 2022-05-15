@@ -1,6 +1,9 @@
-# node
+# Node
 node_modules
 
 # T212 data
 config.env
 portfolioData.json
+
+# Typescript
+dist
