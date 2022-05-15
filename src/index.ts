@@ -8,6 +8,11 @@ import staticData from "./static.json"
 import { writeFile } from "fs/promises"
 
 (async () => {
+	// TODO: test login with invalid credentials
+	// try logging in with 2FA
+	// abstract major functionality to libs
+	// add more metric calculations
+
 	// retrieve login details from config.env
 	dotenv.config({ path: join(__dirname, "..", "config.env") })
 
