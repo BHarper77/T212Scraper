@@ -1,4 +1,3 @@
-
 # T212Scraper
 
 ## Prerequisites
