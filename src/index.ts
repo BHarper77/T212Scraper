@@ -12,6 +12,7 @@ import { writeFile } from "fs/promises"
 	// try logging in with 2FA
 	// abstract major functionality to libs
 	// add more metric calculations
+	// output as CSV and JSON
 
 	// retrieve login details from config.env
 	dotenv.config({ path: join(__dirname, "..", "config.env") })
@@ -23,11 +24,11 @@ import { writeFile } from "fs/promises"
 	}
 
 	const portfolioData = await scrapeData(username, password)
-		.catch((error) => console.log(error))
+		.catch((error) => console.log(`Error scraping portfolio data: ${error}`))
 
-	// write portfolio data to JSON file
-	await writeFile(join(__dirname, "..", "portfolioData.json"), JSON.stringify(portfolioData), "utf8")
-		.catch((error) => console.log("Error writing output to JSON file:", error))
+	if (portfolioData == null) return
+
+	await writeOutput(portfolioData)
 })()
 
 async function scrapeData(username: string, password: string): Promise<PortfolioData> {
@@ -123,4 +124,13 @@ async function scrapeData(username: string, password: string): Promise<Portfolio
 	await browser.close()
 
 	return portfolioData
+}
+
+async function writeOutput(portfolioData: PortfolioData) {
+	// write to JSON
+	await writeFile(join(__dirname, "..", "portfolioData.json"), JSON.stringify(portfolioData), "utf8")
+		.catch((error) => console.log("Error writing output to JSON file:", error))
+
+	// write to Google Sheets
+
 }

@@ -7,3 +7,6 @@ portfolioData.json
 
 # Typescript
 dist
+
+# Security
+credentials
