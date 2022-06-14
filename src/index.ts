@@ -1,7 +1,6 @@
 import dotenv from "dotenv"
 import { join } from "path"
 import { chromium } from "playwright"
-import InvestmentScraper from "./lib/scraper/Scraper"
 import { IPortfolioData } from "./models/PortfolioData"
 import { IPositions } from "./models/Positions"
 import staticData from "./static.json"
