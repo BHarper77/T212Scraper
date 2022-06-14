@@ -1,5 +1,7 @@
 {
-	"AnnualDividendIncome": 95.49,
-	"TargetStockTickers": [],
-	"ExcludedTargetStockTickers": []
+	"annualDividendIncome": 141.46,
+	"targetStockTickers": [],
+	"excludedTickers": [
+		"WBD"
+	]
 }
