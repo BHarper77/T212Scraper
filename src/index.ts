@@ -151,5 +151,15 @@ async function writeOutput(portfolioData: IPortfolioData) {
 		.catch((error) => console.log("Error writing output to JSON file:", error))
 
 	// write to Google Sheets
+	
+	// check if any updates have been made to PIE
+		// get list of existing tickers in sheet
+		// compare with tickers in scraped data
+		// add any missing tickers with data
+		// how to copy over formulas etc?
 
+	// iterate through each ticker row and update data
+		// number of shares owned: row G
+		// average price: row H
+		// total portfolio dividend yield: cell L16
 }
