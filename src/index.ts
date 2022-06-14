@@ -2,8 +2,8 @@ import dotenv from "dotenv"
 import { join } from "path"
 import { chromium } from "playwright"
 import InvestmentScraper from "./lib/scraper/Scraper"
-import { PortfolioData } from "./models/PortfolioData"
-import { Positions } from "./models/Positions"
+import { IPortfolioData } from "./models/PortfolioData"
+import { IPositions } from "./models/Positions"
 import staticData from "./static.json"
 import { writeFile } from "fs/promises"
 
@@ -31,7 +31,7 @@ import { writeFile } from "fs/promises"
 	await writeOutput(portfolioData)
 })()
 
-async function scrapeData(username: string, password: string): Promise<PortfolioData> {
+async function scrapeData(username: string, password: string): Promise<IPortfolioData> {
 	const browser = await chromium.launch({ 
 		headless: false,
 		slowMo: 100 
@@ -61,32 +61,52 @@ async function scrapeData(username: string, password: string): Promise<Portfolio
 	const investments = page.locator(".investments-section .highlight-container")
 	const investmentsCount = await investments.count()
 
-	const positions: Array<Positions> = []
-
-	const investmentScraper = new InvestmentScraper(investments)
+	const positions: IPositions[] = []
 
 	for (let i = 0; i < investmentsCount; i++) {
-		await investmentScraper.setCurrentInvestment(i)
+		const currentInvestment = investments.nth(i)
+		await currentInvestment.click()
+		
+		// ticker
+		const tickerText = await currentInvestment.locator(".investment-item").getAttribute("data-qa-item") ?? ""
+		const ticker = tickerText.split("_")[0]
 
-		const totalReturn = await investmentScraper.getTotalReturn(".return")
-		let percentageReturn = await investmentScraper.getPercentageReturn(".return")
+		if (staticData.excludedTickers.includes(ticker)) continue
+
+		const stockReturn = await currentInvestment.locator(".return").textContent() ?? ""
+		
+		const stockReturnSplit = stockReturn.split(" ")
+			// only include values with currency symbols
+			.map((value) => {
+				// parse and convert values
+				const parsedValue = value.replace(/[()£$]/g, "")
+				return parseFloat(parsedValue)
+			})
+
+		let [totalReturn, percentageReturn] = stockReturnSplit
 
 		// handle negative returns, percentage isn't displayed as negative
 		totalReturn < 0 ? percentageReturn = 0 - percentageReturn : percentageReturn
 
-		const currentInvestment = investmentScraper.currentInvestment
-
 		const totalValue = await currentInvestment.locator(".total-value").textContent() ?? ""
 		const parsedTotalValue = parseFloat(totalValue.replace(/[$£]/g, ""))
 
+		// dividend yield
+		const dividendYield = await page.locator(".company-details [data-qa-key-ratios='dividendYield'] .value").textContent({ timeout: 3000 })
+			.catch((error) => {
+				console.log("Error extracting dividend yield. This might be due to ETFs not displaying dividend yield info:", error)
+				return "0"
+			}) ?? "".replace(/[%]/g, "")
+
 		positions.push({
-			Name: await currentInvestment.locator(".instrument-name").textContent() ?? "",
-			Ticker: await investmentScraper.getTicker(".investment-item", "data-qa-item"),
-			TotalValue: parsedTotalValue,
-			TotalShares: parseFloat(await currentInvestment.locator(".quantity").textContent() ?? ""),
-			TotalReturn: totalReturn,
-			PercentageReturn: percentageReturn,
-			DividendYield: await investmentScraper.getDividendYield(page, ".company-details [data-qa-key-ratios='dividendYield'] .value")
+			name: await currentInvestment.locator(".instrument-name").textContent() ?? "",
+			ticker: ticker,
+			totalValue: parsedTotalValue,
+			totalShares: parseFloat(await currentInvestment.locator(".quantity").textContent() ?? ""),
+			totalReturn: totalReturn,
+			percentageReturn: percentageReturn,
+			dividendYield: parseFloat(dividendYield),
+			averagePrice: 0
 		})
 	}
 
@@ -110,14 +130,14 @@ async function scrapeData(username: string, password: string): Promise<Portfolio
 	const totalInvested = await portfolioSummary.locator("[data-qa-portfolio-invested='portfolio-invested'] .value").textContent() ?? ""
 	const parsedTotalInvested = parseFloat(totalInvested.replace(/[£%,]/g, ""))
 
-	const portfolioData: PortfolioData = {
-		TotalValue: parsedTotalValue,
-		TotalInvested: parsedTotalInvested,
-		TotalReturn: totalReturn,
-		PercentageReturn: percentageReturn,
-		DividendYield: parseFloat(((staticData.AnnualDividendIncome / parsedTotalValue) * 100).toFixed(2)),
-		TotalInvestments: investmentsCount,
-		Positions: positions
+	const portfolioData: IPortfolioData = {
+		totalValue: parsedTotalValue,
+		totalInvested: parsedTotalInvested,
+		totalReturn: totalReturn,
+		percentageReturn: percentageReturn,
+		dividendYield: parseFloat(((staticData.annualDividendIncome / parsedTotalValue) * 100).toFixed(2)),
+		totalInvestments: investmentsCount - staticData.excludedTickers.length,
+		positions: positions
 	}
 
 	await page.close()
@@ -126,9 +146,9 @@ async function scrapeData(username: string, password: string): Promise<Portfolio
 	return portfolioData
 }
 
-async function writeOutput(portfolioData: PortfolioData) {
+async function writeOutput(portfolioData: IPortfolioData) {
 	// write to JSON
-	await writeFile(join(__dirname, "..", "portfolioData.json"), JSON.stringify(portfolioData), "utf8")
+	await writeFile(join(__dirname, "..", "portfolioData.json"), JSON.stringify(portfolioData, null, 4), "utf8")
 		.catch((error) => console.log("Error writing output to JSON file:", error))
 
 	// write to Google Sheets
