@@ -1,9 +1,10 @@
-export interface Positions {
-	Name: string
-	Ticker: string
-	TotalValue: number
-	TotalShares: number
-	TotalReturn: number
-	PercentageReturn: number
-	DividendYield: number
+export interface IPositions {
+	name: string
+	ticker: string
+	totalValue: number
+	totalShares: number
+	totalReturn: number
+	percentageReturn: number
+	dividendYield: number
+	averagePrice: number
 }
