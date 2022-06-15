@@ -5,6 +5,8 @@ import { IPortfolioData } from "./models/PortfolioData"
 import { IPositions } from "./models/Positions"
 import staticData from "./static.json"
 import { writeFile } from "fs/promises"
+import { google } from "googleapis"
+import credentials from "../credentials.json"
 
 (async () => {
 	// TODO: test login with invalid credentials
@@ -13,21 +15,23 @@ import { writeFile } from "fs/promises"
 	// add more metric calculations
 	// output as CSV and JSON
 
+	test()
+
 	// retrieve login details from config.env
-	dotenv.config({ path: join(__dirname, "..", "config.env") })
+	// dotenv.config({ path: join(__dirname, "..", "config.env") })
 
-	const { T212USERNAME: username, T212PASSWORD: password } = process.env
+	// const { T212USERNAME: username, T212PASSWORD: password } = process.env
 
-	if (username === undefined || password === undefined) {
-		throw new Error("Username or password is undefined")
-	}
+	// if (username === undefined || password === undefined) {
+	// 	throw new Error("Username or password is undefined")
+	// }
 
-	const portfolioData = await scrapeData(username, password)
-		.catch((error) => console.log(`Error scraping portfolio data: ${error}`))
+	// const portfolioData = await scrapeData(username, password)
+	// 	.catch((error) => console.log(`Error scraping portfolio data: ${error}`))
 
-	if (portfolioData == null) return
+	// if (portfolioData == null) return
 
-	await writeOutput(portfolioData)
+	// await writeOutput(portfolioData)
 })()
 
 async function scrapeData(username: string, password: string): Promise<IPortfolioData> {
@@ -150,10 +154,53 @@ async function writeOutput(portfolioData: IPortfolioData) {
 	await writeFile(join(__dirname, "..", "portfolioData.json"), JSON.stringify(portfolioData, null, 4), "utf8")
 		.catch((error) => console.log("Error writing output to JSON file:", error))
 
+
+}
+
+async function test() {
 	// write to Google Sheets
+	const { client_email, private_key } = credentials
+
+	const jwtClient = new google.auth.JWT({
+		email: client_email,
+		key: private_key,
+		scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+	})
 	
+	// Acquire an auth client, and bind it to all future calls
+	await jwtClient.authorize()
+	google.options({ auth: jwtClient })
+
+	const { spreadsheets } = google.sheets({ version: "v4" })
+	
+	// TODO: don't commit
+	const spreadsheetId = "1ZMnXnY5m_ZDNN1_pQwcI84Rkoiwpm6j6VHMDTJomm0w"
+
 	// check if any updates have been made to PIE
-		// get list of existing tickers in sheet
+	// get list of existing tickers in sheet
+	const tickersResponse = await spreadsheets.values.get({
+		spreadsheetId,
+		range: "A:A",
+		majorDimension: "COLUMNS",
+	}).then((response) => response.data).catch((error) => {
+		console.log("Error retrieving tickers:", error)
+		throw error
+	})
+
+	// retrieve row data for each ticker
+	for (const [index, ticker] of (tickersResponse.values ?? []).entries()) {
+		let targetTicker = ""
+		if (Array.isArray(ticker)) {
+			targetTicker = ticker[0]
+		}
+
+		const isTicker = !(targetTicker === "" || targetTicker === "Total" || targetTicker === "Weighted")
+
+		if (isTicker === false) continue
+
+		// send request for row data for each ticker 
+	}
+
 		// compare with tickers in scraped data
 		// add any missing tickers with data
 		// how to copy over formulas etc?
