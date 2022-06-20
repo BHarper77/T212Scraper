@@ -1,8 +1,8 @@
 import dotenv from "dotenv"
 import { join } from "path"
 import { chromium } from "playwright"
-import { IPortfolioData } from "./models/PortfolioData"
-import { IPositions } from "./models/Positions"
+import { IPortfolioData } from "./models/IPortfolioData"
+import { IPosition } from "./models/IPosition"
 import staticData from "./static.json"
 import { writeFile } from "fs/promises"
 import { google } from "googleapis"
@@ -14,8 +14,28 @@ import credentials from "../credentials.json"
 	// abstract major functionality to libs
 	// add more metric calculations
 	// output as CSV and JSON
+	
+	// dummy data
+	const portfolioData: IPortfolioData = {
+		totalValue: 0,
+		totalInvested: 0,
+		totalReturn: 0,
+		percentageReturn: 0,
+		dividendYield: 0,
+		totalInvestments: 0,
+		positions: [{
+			name: "",
+			ticker: "MO",
+			totalValue: 0,
+			totalShares: 0,
+			totalReturn: 0,
+			percentageReturn: 0,
+			dividendYield: 0,
+			averagePrice: 0
+		}]
+	}
 
-	test()
+	await test(portfolioData)
 
 	// retrieve login details from config.env
 	// dotenv.config({ path: join(__dirname, "..", "config.env") })
@@ -64,7 +84,7 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 	const investments = page.locator(".investments-section .highlight-container")
 	const investmentsCount = await investments.count()
 
-	const positions: IPositions[] = []
+	const positions: IPosition[] = []
 
 	for (let i = 0; i < investmentsCount; i++) {
 		const currentInvestment = investments.nth(i)
@@ -157,7 +177,7 @@ async function writeOutput(portfolioData: IPortfolioData) {
 
 }
 
-async function test() {
+async function test(portfolioData: IPortfolioData) {
 	// write to Google Sheets
 	const { client_email, private_key } = credentials
 
@@ -187,18 +207,42 @@ async function test() {
 		throw error
 	})
 
+	if (tickersResponse.values === undefined) {
+		console.log("No tickers retrieved from Sheets. Response:", tickersResponse)
+		return
+	}
+
+	const values = tickersResponse.values![0]
+
 	// retrieve row data for each ticker
-	for (const [index, ticker] of (tickersResponse.values ?? []).entries()) {
-		let targetTicker = ""
-		if (Array.isArray(ticker)) {
-			targetTicker = ticker[0]
-		}
+	for (const [index, ticker] of values.entries()) {
+		const row = index + 1
 
-		const isTicker = !(targetTicker === "" || targetTicker === "Total" || targetTicker === "Weighted")
-
+		const isTicker = !(ticker === "Symbol" || ticker === "" || ticker === "Total" || ticker === "Weighted")
 		if (isTicker === false) continue
 
 		// send request for row data for each ticker 
+		const currentStockData = await spreadsheets.values.get({
+			spreadsheetId,
+			range: `${row}:${row}`,
+			majorDimension: "ROWS"
+		})
+
+		const updatedStockData = portfolioData.positions.filter((position) => position.ticker === ticker)
+
+		// TODO: create model for portfolio sheet responses
+		// use models to copy over updated values to updated portfolio data obj
+
+		// construct new stock data object with updated and static values
+		const updateResponse = await spreadsheets.values.update({
+			spreadsheetId,
+			range: `B${row}:M${row}`,
+			requestBody: {
+				values: [
+
+				]
+			}
+		})
 	}
 
 		// compare with tickers in scraped data
