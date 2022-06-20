@@ -1,4 +1,4 @@
-import { IPositions } from "./Positions"
+import { IPosition } from "./IPosition"
 
 export interface IPortfolioData {
 	totalValue: number
@@ -7,5 +7,5 @@ export interface IPortfolioData {
 	percentageReturn: number
 	dividendYield: number
 	totalInvestments: number
-	positions: IPositions[]
+	positions: IPosition[]
 }

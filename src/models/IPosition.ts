@@ -1,4 +1,4 @@
-export interface IPositions {
+export interface IPosition {
 	name: string
 	ticker: string
 	totalValue: number
