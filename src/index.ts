@@ -221,36 +221,39 @@ async function test(portfolioData: IPortfolioData) {
 		const isTicker = !(ticker === "Symbol" || ticker === "" || ticker === "Total" || ticker === "Weighted")
 		if (isTicker === false) continue
 
-		// send request for row data for each ticker 
-		const currentStockData = await spreadsheets.values.get({
+		const currentStockData = portfolioData.positions.find((position) => position.ticker === ticker)
+
+		if (currentStockData === undefined) {
+			console.log("Error finding current stock data on ticker:", ticker)
+			return
+		}
+
+		// update specific cells with new scraped values
+		const updateResponse = spreadsheets.values.batchUpdate({
 			spreadsheetId,
-			range: `${row}:${row}`,
-			majorDimension: "ROWS"
-		})
-
-		const updatedStockData = portfolioData.positions.filter((position) => position.ticker === ticker)
-
-		// TODO: create model for portfolio sheet responses
-		// use models to copy over updated values to updated portfolio data obj
-
-		// construct new stock data object with updated and static values
-		const updateResponse = await spreadsheets.values.update({
-			spreadsheetId,
-			range: `B${row}:M${row}`,
 			requestBody: {
-				values: [
-
+				valueInputOption: "USER_ENTERED",
+				data: [
+					{
+						"range": `H${row}`,
+						"values": [
+							[currentStockData.averagePrice]
+						]
+					},
+					{
+						"range": `G${row}`,
+						"values": [
+							[currentStockData.totalShares]
+						]
+					}
 				]
 			}
 		})
+
+		console.log({ updateResponse })
 	}
 
-		// compare with tickers in scraped data
-		// add any missing tickers with data
-		// how to copy over formulas etc?
+	// check for new positions
 
-	// iterate through each ticker row and update data
-		// number of shares owned: row G
-		// average price: row H
-		// total portfolio dividend yield: cell L16
+	// total portfolio dividend yield: cell L16
 }
