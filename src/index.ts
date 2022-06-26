@@ -9,49 +9,21 @@ import { google } from "googleapis"
 import credentials from "../credentials.json"
 
 (async () => {
-	// TODO: test login with invalid credentials
-	// try logging in with 2FA
-	// abstract major functionality to libs
-	// add more metric calculations
-	// output as CSV and JSON
-	
-	// dummy data
-	const portfolioData: IPortfolioData = {
-		totalValue: 0,
-		totalInvested: 0,
-		totalReturn: 0,
-		percentageReturn: 0,
-		dividendYield: 0,
-		totalInvestments: 0,
-		positions: [{
-			name: "",
-			ticker: "MO",
-			totalValue: 0,
-			totalShares: 0,
-			totalReturn: 0,
-			percentageReturn: 0,
-			dividendYield: 0,
-			averagePrice: 0
-		}]
+	// retrieve login details from config.env
+	dotenv.config({ path: join(__dirname, "..", "config.env") })
+
+	const { T212USERNAME: username, T212PASSWORD: password } = process.env
+
+	if (username === undefined || password === undefined) {
+		throw new Error("Username or password is undefined")
 	}
 
-	await test(portfolioData)
+	const portfolioData = await scrapeData(username, password)
+		.catch((error) => console.log(`Error scraping portfolio data: ${error}`))
 
-	// retrieve login details from config.env
-	// dotenv.config({ path: join(__dirname, "..", "config.env") })
+	if (portfolioData == null) return
 
-	// const { T212USERNAME: username, T212PASSWORD: password } = process.env
-
-	// if (username === undefined || password === undefined) {
-	// 	throw new Error("Username or password is undefined")
-	// }
-
-	// const portfolioData = await scrapeData(username, password)
-	// 	.catch((error) => console.log(`Error scraping portfolio data: ${error}`))
-
-	// if (portfolioData == null) return
-
-	// await writeOutput(portfolioData)
+	await writeOutput(portfolioData)
 })()
 
 async function scrapeData(username: string, password: string): Promise<IPortfolioData> {
@@ -80,6 +52,12 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 		page.waitForNavigation({ waitUntil: "networkidle" })
 	])
 
+	// ensure holdings tab is selected
+	const currentTabText = await page.locator(".investment-tab.selected").innerText()
+	if (currentTabText.toLowerCase() === "Pies".toLowerCase()) {
+		await page.click("[data-qa-tab='orders']")
+	}
+
 	// loop through portfolio holdings
 	const investments = page.locator(".investments-section .highlight-container")
 	const investmentsCount = await investments.count()
@@ -92,7 +70,11 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 		
 		// ticker
 		const tickerText = await currentInvestment.locator(".investment-item").getAttribute("data-qa-item") ?? ""
-		const ticker = tickerText.split("_")[0]
+		let ticker = tickerText.split("_")[0]
+
+		if (ticker.charAt(ticker.length - 1) === "l") {
+			ticker = ticker.slice(0, ticker.length - 1)
+		}
 
 		if (staticData.excludedTickers.includes(ticker)) continue
 
@@ -114,22 +96,18 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 		const totalValue = await currentInvestment.locator(".total-value").textContent() ?? ""
 		const parsedTotalValue = parseFloat(totalValue.replace(/[$£]/g, ""))
 
-		// dividend yield
-		const dividendYield = await page.locator(".company-details [data-qa-key-ratios='dividendYield'] .value").textContent({ timeout: 3000 })
-			.catch((error) => {
-				console.log("Error extracting dividend yield. This might be due to ETFs not displaying dividend yield info:", error)
-				return "0"
-			}) ?? "".replace(/[%]/g, "")
+		// average price
+		const averagePrice = await page.locator("[data-qa-average-price='average-price'] .value").textContent() ?? ""
+		const averagePriceParsed = averagePrice.split(" ").at(-1)?.match(/[0-9.]+/g) ?? []
 
 		positions.push({
 			name: await currentInvestment.locator(".instrument-name").textContent() ?? "",
-			ticker: ticker,
+			ticker,
 			totalValue: parsedTotalValue,
 			totalShares: parseFloat(await currentInvestment.locator(".quantity").textContent() ?? ""),
-			totalReturn: totalReturn,
-			percentageReturn: percentageReturn,
-			dividendYield: parseFloat(dividendYield),
-			averagePrice: 0
+			totalReturn,
+			percentageReturn,
+			averagePrice: parseFloat(averagePriceParsed[0])
 		})
 	}
 
@@ -174,10 +152,6 @@ async function writeOutput(portfolioData: IPortfolioData) {
 	await writeFile(join(__dirname, "..", "portfolioData.json"), JSON.stringify(portfolioData, null, 4), "utf8")
 		.catch((error) => console.log("Error writing output to JSON file:", error))
 
-
-}
-
-async function test(portfolioData: IPortfolioData) {
 	// write to Google Sheets
 	const { client_email, private_key } = credentials
 
@@ -192,9 +166,7 @@ async function test(portfolioData: IPortfolioData) {
 	google.options({ auth: jwtClient })
 
 	const { spreadsheets } = google.sheets({ version: "v4" })
-	
-	// TODO: don't commit
-	const spreadsheetId = "1ZMnXnY5m_ZDNN1_pQwcI84Rkoiwpm6j6VHMDTJomm0w"
+	const { SPREADSHEETID: spreadsheetId } = process.env
 
 	// check if any updates have been made to PIE
 	// get list of existing tickers in sheet
@@ -214,46 +186,46 @@ async function test(portfolioData: IPortfolioData) {
 
 	const values = tickersResponse.values![0]
 
-	// retrieve row data for each ticker
 	for (const [index, ticker] of values.entries()) {
 		const row = index + 1
 
-		const isTicker = !(ticker === "Symbol" || ticker === "" || ticker === "Total" || ticker === "Weighted")
-		if (isTicker === false) continue
-
-		const currentStockData = portfolioData.positions.find((position) => position.ticker === ticker)
+		const currentStockData = portfolioData.positions.find((position) => position.ticker === ticker.split(":").at(-1))
 
 		if (currentStockData === undefined) {
 			console.log("Error finding current stock data on ticker:", ticker)
-			return
+			continue
 		}
 
 		// update specific cells with new scraped values
-		const updateResponse = spreadsheets.values.batchUpdate({
+		await spreadsheets.values.batchUpdate({
 			spreadsheetId,
 			requestBody: {
 				valueInputOption: "USER_ENTERED",
 				data: [
 					{
-						"range": `H${row}`,
-						"values": [
+						range: `H${row}`,
+						values: [
 							[currentStockData.averagePrice]
 						]
 					},
 					{
-						"range": `G${row}`,
-						"values": [
+						range: `G${row}`,
+						values: [
 							[currentStockData.totalShares]
 						]
 					}
 				]
 			}
 		})
-
-		console.log({ updateResponse })
 	}
 
-	// check for new positions
-
-	// total portfolio dividend yield: cell L16
+	// update portfolio dividend yield
+	await spreadsheets.values.update({
+		spreadsheetId,
+		range: "B16",
+		valueInputOption: "USER_ENTERED",
+		requestBody: {
+			values: [[portfolioData.dividendYield]]
+		}
+	})
 }

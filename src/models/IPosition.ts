@@ -5,6 +5,5 @@ export interface IPosition {
 	totalShares: number
 	totalReturn: number
 	percentageReturn: number
-	dividendYield: number
 	averagePrice: number
 }
