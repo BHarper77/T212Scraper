@@ -1,6 +1,6 @@
 import dotenv from "dotenv"
 import { join } from "path"
-import { chromium } from "playwright"
+import { chromium, Page } from "playwright"
 import { IPortfolioData } from "./models/IPortfolioData"
 import { IPosition } from "./models/IPosition"
 import staticData from "./static.json"
@@ -141,10 +141,62 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 		positions: positions
 	}
 
+	await updateStockEvents(page, portfolioData)
+
 	await page.close()
 	await browser.close()
 
 	return portfolioData
+}
+
+async function updateStockEvents(page: Page, portfolioData: IPortfolioData) {
+	await page.goto("https://stockevents.app/for-you", {
+		waitUntil: "domcontentloaded"
+	})
+
+	// scroll QR code into view and wait for user input
+	await page.locator(".bg-white.p-4.shadow-card.rounded-md").scrollIntoViewIfNeeded()
+	console.log("Waiting for user input. Scan QR code with Stock Events app")
+
+	await page.waitForFunction(() => window.location.href === "https://stockevents.app/for-you", null, {
+		timeout: 30000
+	})
+
+	for (const position of portfolioData.positions) {
+		try {
+			await page.goto(`https://stockevents.app/stock/${position.ticker}`, {
+				waitUntil: "networkidle"
+			})
+	
+			// make sure position exists in StockEvents portfolio
+			const addButton = await page.locator("button", { hasText: "Add to Watchlist" }).count()
+			if (addButton > 0) {
+				await page.locator("button", { hasText: "Add to Watchlist" }).click()
+			}
+
+			await page.locator("button", { hasText: "Edit Holdings" }).click()
+
+			const inputField = page.locator("#first-name")
+			const currentTotalShares = await inputField.getAttribute("value") ?? null
+
+			if (currentTotalShares === null) {
+				console.log("Error getting current total shares value for ticker:", position.ticker)
+				continue
+			}
+
+			await inputField.click()
+
+			for (const char of currentTotalShares) {
+				await page.keyboard.press("Backspace")
+			}
+
+			await inputField.type(position.totalShares.toString())
+			await page.locator("button", { hasText: "Save" }).click()
+		}
+		catch (error) {
+			console.log("Error updating ticker:", position.ticker, error)
+		}
+	}
 }
 
 async function writeOutput(portfolioData: IPortfolioData) {
