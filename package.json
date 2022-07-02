@@ -3,6 +3,9 @@
 	"version": "1.0.0",
 	"description": "Scrapes a Trading212 portfolio",
 	"main": "index.ts",
+	"engines": {
+		"node": ">=16.0.0"
+	},
 	"scripts": {
 		"start": "ts-node src/index.ts",
 		"build": "tsc -b .",
