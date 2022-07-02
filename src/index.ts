@@ -1,12 +1,12 @@
 import dotenv from "dotenv"
+import { writeFile } from "fs/promises"
+import { google } from "googleapis"
 import { join } from "path"
 import { chromium, Page } from "playwright"
+import credentials from "../credentials.json"
 import { IPortfolioData } from "./models/IPortfolioData"
 import { IPosition } from "./models/IPosition"
 import staticData from "./static.json"
-import { writeFile } from "fs/promises"
-import { google } from "googleapis"
-import credentials from "../credentials.json"
 
 (async () => {
 	// retrieve login details from config.env
@@ -100,6 +100,8 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 		const averagePrice = await page.locator("[data-qa-average-price='average-price'] .value").textContent() ?? ""
 		const averagePriceParsed = averagePrice.split(" ").at(-1)?.match(/[0-9.]+/g) ?? []
 
+		const countryCode = await page.locator(".country-code").textContent() ?? ""
+			
 		positions.push({
 			name: await currentInvestment.locator(".instrument-name").textContent() ?? "",
 			ticker,
@@ -107,7 +109,8 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 			totalShares: parseFloat(await currentInvestment.locator(".quantity").textContent() ?? ""),
 			totalReturn,
 			percentageReturn,
-			averagePrice: parseFloat(averagePriceParsed[0])
+			averagePrice: parseFloat(averagePriceParsed[0]),
+			countryCode
 		})
 	}
 
@@ -141,7 +144,8 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 		positions: positions
 	}
 
-	await updateStockEvents(page, portfolioData)
+	const dividendYield = await updateStockEvents(page, portfolioData)
+	portfolioData.dividendYield = dividendYield
 
 	await page.close()
 	await browser.close()
@@ -149,7 +153,7 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 	return portfolioData
 }
 
-async function updateStockEvents(page: Page, portfolioData: IPortfolioData) {
+async function updateStockEvents(page: Page, portfolioData: IPortfolioData): Promise<number> {
 	await page.goto("https://stockevents.app/for-you", {
 		waitUntil: "domcontentloaded"
 	})
@@ -162,9 +166,19 @@ async function updateStockEvents(page: Page, portfolioData: IPortfolioData) {
 		timeout: 30000
 	})
 
+	const dividendYield = await page.locator("[href='/dividends'] .text-xl.font-semibold").textContent()
+	const parsedDividendYield = parseFloat(dividendYield?.match(/[0-9.]+/g)?.at(0) ?? "")
+
 	for (const position of portfolioData.positions) {
 		try {
-			await page.goto(`https://stockevents.app/stock/${position.ticker}`, {
+			// non US tickers have stock exchange appended to end
+			let urlTicker = position.ticker
+
+			if (position.countryCode === "IE" || position.countryCode === "UK") {
+				urlTicker = urlTicker + ".LSE"
+			}
+
+			await page.goto(`https://stockevents.app/stock/${urlTicker}`, {
 				waitUntil: "networkidle"
 			})
 	
@@ -197,6 +211,8 @@ async function updateStockEvents(page: Page, portfolioData: IPortfolioData) {
 			console.log("Error updating ticker:", position.ticker, error)
 		}
 	}
+
+	return parsedDividendYield
 }
 
 async function writeOutput(portfolioData: IPortfolioData) {
@@ -205,6 +221,10 @@ async function writeOutput(portfolioData: IPortfolioData) {
 		.catch((error) => console.log("Error writing output to JSON file:", error))
 
 	// write to Google Sheets
+	await writeToSheets(portfolioData)
+}
+
+async function writeToSheets(portfolioData: IPortfolioData) {
 	const { client_email, private_key } = credentials
 
 	const jwtClient = new google.auth.JWT({

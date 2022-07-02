@@ -6,4 +6,5 @@ export interface IPosition {
 	totalReturn: number
 	percentageReturn: number
 	averagePrice: number
+	countryCode: string
 }
