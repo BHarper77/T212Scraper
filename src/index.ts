@@ -221,6 +221,7 @@ async function writeOutput(portfolioData: IPortfolioData) {
 		.catch((error) => console.log("Error writing output to JSON file:", error))
 
 	// write to Google Sheets
+	// NOTE: comment out function call if you don't have a Google Sheet to write to
 	await writeToSheets(portfolioData)
 }
 
