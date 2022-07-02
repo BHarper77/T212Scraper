@@ -16,3 +16,5 @@
 ## Usage
 
 1. `npm start`
+2. If 2FA is enabled on Trading212 account, it will need user input
+3. Stock Events web app requires a QR code to be scanned to login, this is done from the mobile app
