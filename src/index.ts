@@ -27,6 +27,7 @@ import staticData from "./static.json"
 })()
 
 async function scrapeData(username: string, password: string): Promise<IPortfolioData> {
+	console.log("Scraping T212")
 	const browser = await chromium.launch({ 
 		headless: false,
 		slowMo: 100 
@@ -154,6 +155,7 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 }
 
 async function updateStockEvents(page: Page, portfolioData: IPortfolioData): Promise<number> {
+	console.log("Scraping Stock Events")
 	await page.goto("https://stockevents.app/for-you", {
 		waitUntil: "domcontentloaded"
 	})
@@ -226,6 +228,7 @@ async function writeOutput(portfolioData: IPortfolioData) {
 }
 
 async function writeToSheets(portfolioData: IPortfolioData) {
+	console.log("Updating Google Sheets")
 	const { client_email, private_key } = credentials
 
 	const jwtClient = new google.auth.JWT({
