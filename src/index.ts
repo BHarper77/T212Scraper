@@ -40,16 +40,17 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 	})
 	
 	// handle cookie pop up
-	if (await page.locator(".cookies-notice_cookies-notice__33EUa").isVisible()) {
-		await page.click(".cookies-notice_button__3K8cT.cookies-notice_button-accent__2rm8R")
+	const cookiePopup = page.locator(".CookiesNotice_cookies-notice__2Hdlb")
+	if (await cookiePopup.isVisible() === true) {
+		await page.click(".Button_button__27xhw.Button_accent__oV2pE.CookiesNotice_button__35b5K.CookiesNotice_button-accent__3Qvh7")
 	}
 
-	await page.click(".header_login-button__daXsh")
+	await page.click(".Header_login-button__1CUw0")
 	await page.type("[name='email']", username)
 	await page.type("[name='password']", password)
 
 	await Promise.all([
-		page.click(".submit-button_input__3s_QD"),
+		page.click("[value='Log in']"),
 		page.waitForNavigation({ waitUntil: "networkidle" })
 	])
 
@@ -99,7 +100,7 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 
 		// average price
 		const averagePrice = await page.locator("[data-qa-average-price='average-price'] .value").textContent() ?? ""
-		const averagePriceParsed = averagePrice.split(" ").at(-1)?.match(/[0-9.]+/g) ?? []
+		const averagePriceParsed = averagePrice.split(" ").at(-1)?.match(/[0-9.]+/g) ?? ["1"]
 
 		const countryCode = await page.locator(".country-code").textContent() ?? ""
 			
@@ -168,7 +169,7 @@ async function updateStockEvents(page: Page, portfolioData: IPortfolioData): Pro
 		timeout: 30000
 	})
 
-	const dividendYield = await page.locator("[href='/dividends'] .text-xl.font-semibold").textContent()
+	const dividendYield = await page.locator(".text-xs.font-semibold.inline-block").nth(2).textContent()
 	const parsedDividendYield = parseFloat(dividendYield?.match(/[0-9.]+/g)?.at(0) ?? "")
 
 	for (const position of portfolioData.positions) {
