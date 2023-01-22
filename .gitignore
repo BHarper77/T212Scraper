@@ -10,3 +10,9 @@ dist
 
 # Security
 credentials.json
+
+# AWS
+*_accessKeys.csv
+
+# deployment
+deploy/.terraform
