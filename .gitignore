@@ -1,7 +1,8 @@
 # Node
 node_modules
 
-# T212 data
+# Data
+*.png
 config.env
 portfolioData.json
 

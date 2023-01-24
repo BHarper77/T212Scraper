@@ -165,6 +165,9 @@ async function updateStockEvents(page: Page, portfolioData: IPortfolioData): Pro
 	await page.locator(".bg-white.p-4.shadow-card.rounded-md").scrollIntoViewIfNeeded()
 	console.log("Waiting for user input. Scan QR code with Stock Events app")
 
+	// TODO: send screenshot to personal email
+	await page.screenshot({ path: "./qrCode.png" })
+
 	await page.waitForFunction(() => window.location.href === "https://stockevents.app/for-you", null, {
 		timeout: 30000
 	})
@@ -173,6 +176,7 @@ async function updateStockEvents(page: Page, portfolioData: IPortfolioData): Pro
 		hasText: /Yield$/g
 	})
 
+	// wait for dividend yield element to be populated with non 0
 	await page.waitForTimeout(3000)
 	const dividendYield = await dividendYieldLocator.textContent()
 	const parsedDividendYield = parseFloat(dividendYield?.match(/[0-9.]+/g)?.at(0) ?? "")
