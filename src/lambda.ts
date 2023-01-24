@@ -20,19 +20,15 @@ export async function handler() {
 		throw new Error("Username or password is undefined")
 	}
 
-	const portfolioData = await scrapeData(username, password)
+	await scrapeData(username, password)
 		.catch((error) => console.log(`Error scraping portfolio data: ${error}`))
-
-	if (portfolioData == null) return
-
-	await writeOutput(portfolioData)
 }
 
 async function scrapeData(username: string, password: string): Promise<IPortfolioData> {
 	console.log("Scraping T212")
 	const browser = await chromium.launch({ 
-		headless: false,
-		slowMo: 100 
+		headless: process.env.NODE_ENV !== "local",
+		slowMo: 100
 	})
 
 	const page = await browser.newPage()
@@ -41,7 +37,6 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 		waitUntil: "networkidle"
 	})
 	
-	// handle cookie pop up
 	const cookiePopup = page.locator("div[class^='CookiesNotice_cookies-notice__']")
 	if (await cookiePopup.isVisible() === true) {
 		await page.click("div[class*='CookiesNotice_button-accent__']")
@@ -56,26 +51,29 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 		page.waitForNavigation({ waitUntil: "networkidle" })
 	])
 
-	// ensure holdings tab is selected
+	// ensure holdings tab is selected so all stocks are displayed
 	const currentTabText = await page.locator(".investment-tab.selected").innerText()
-	if (currentTabText.toLowerCase() === "Pies".toLowerCase()) {
+	if (currentTabText.toLowerCase() === "pies".toLowerCase()) {
 		await page.click("[data-qa-tab='orders']")
 	}
 
-	// loop through portfolio holdings
 	const investments = page.locator(".investments-section .highlight-container")
 	const investmentsCount = await investments.count()
 
 	const positions: IPosition[] = []
 
+	// using i++ loop as Playwright doesn't have easy method of iterating through elements
+	// might change in future
 	for (let i = 0; i < investmentsCount; i++) {
 		const currentInvestment = investments.nth(i)
+
+		// show current investment info
 		await currentInvestment.click()
 		
-		// ticker
 		const tickerText = await currentInvestment.locator(".investment-item").getAttribute("data-qa-item") ?? ""
 		let ticker = tickerText.split("_")[0]
 
+		// parse any exchange specific tickers
 		if (ticker.charAt(ticker.length - 1) === "l") {
 			ticker = ticker.slice(0, ticker.length - 1)
 		}
@@ -84,23 +82,22 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 
 		const stockReturn = await currentInvestment.locator(".return").textContent() ?? ""
 		
+		// parse return metrics, displayed in format "+£20 (5%)"
 		const stockReturnSplit = stockReturn.split(" ")
-			// only include values with currency symbols
+			// only include values with currency symbols (no percentages)
 			.map((value) => {
-				// parse and convert values
 				const parsedValue = value.replace(/[()£$]/g, "")
 				return parseFloat(parsedValue)
 			})
 
 		let [totalReturn, percentageReturn] = stockReturnSplit
 
-		// handle negative returns, percentage isn't displayed as negative
+		// handle negative returns, percentage is coloured red rather than containing negative symbol
 		totalReturn < 0 ? percentageReturn = 0 - percentageReturn : percentageReturn
 
 		const totalValue = await currentInvestment.locator(".total-value").textContent() ?? ""
 		const parsedTotalValue = parseFloat(totalValue.replace(/[$£]/g, ""))
 
-		// average price
 		const averagePrice = await page.locator("[data-qa-average-price='average-price'] .value").textContent() ?? ""
 		const averagePriceParsed = averagePrice.split(" ").at(-1)?.match(/[0-9.]+/g) ?? ["1"]
 
@@ -128,7 +125,7 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 		return parseFloat(parsedValue)
 	})
 
-	// handle negative returns, percentage isn't displayed as negative
+	// handle negative returns, percentage is coloured red rather than containing negative symbol
 	let [totalReturn, percentageReturn] = portfolioReturnSplit
 	totalReturn < 0 ? percentageReturn = 0 - percentageReturn : percentageReturn
 
@@ -211,6 +208,7 @@ async function updateStockEvents(page: Page, portfolioData: IPortfolioData): Pro
 
 			await inputField.click()
 
+			// remove existing value to be replaced
 			for (const char of currentTotalShares) {
 				await page.keyboard.press("Backspace")
 			}
@@ -226,6 +224,7 @@ async function updateStockEvents(page: Page, portfolioData: IPortfolioData): Pro
 	return parsedDividendYield
 }
 
+/** @deprecated */
 async function writeOutput(portfolioData: IPortfolioData) {
 	if (process.env.NODE_ENV === "local") {
 		// write to JSON if running locally
@@ -278,8 +277,8 @@ async function writeToSheets(portfolioData: IPortfolioData) {
 
 		const currentStockData = portfolioData.positions.find((position) => position.ticker === ticker.split(":").at(-1))
 
+		// skip cells including non ticker values e.g. "Symbol", "Total" etc
 		if (currentStockData === undefined) {
-			console.log("Error finding current stock data on ticker:", ticker)
 			continue
 		}
 
@@ -305,8 +304,6 @@ async function writeToSheets(portfolioData: IPortfolioData) {
 			}
 		})
 	}
-
-	console.log(portfolioData.dividendYield)
 
 	// update portfolio dividend yield
 	await spreadsheets.values.update({
