@@ -143,7 +143,8 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 		totalInvested: parsedTotalInvested,
 		totalReturn: totalReturn,
 		percentageReturn: percentageReturn,
-		dividendYield: parseFloat(((staticData.annualDividendIncome / parsedTotalValue) * 100).toFixed(2)),
+		// scraped via Stock Events
+		dividendYield: 0,
 		totalInvestments: investmentsCount - staticData.excludedTickers.length,
 		positions: positions
 	}
