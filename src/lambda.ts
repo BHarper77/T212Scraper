@@ -42,12 +42,12 @@ async function scrapeData(username: string, password: string): Promise<IPortfoli
 	})
 	
 	// handle cookie pop up
-	const cookiePopup = page.locator(".CookiesNotice_cookies-notice__2Hdlb")
+	const cookiePopup = page.locator("div[class^='CookiesNotice_cookies-notice__']")
 	if (await cookiePopup.isVisible() === true) {
-		await page.click(".Button_button__27xhw.Button_accent__oV2pE.CookiesNotice_button__35b5K.CookiesNotice_button-accent__3Qvh7")
+		await page.click("div[class*='CookiesNotice_button-accent__']")
 	}
 
-	await page.click(".Header_login-button__1CUw0")
+	await page.click("[class^='Header_login-button__']")
 	await page.type("[name='email']", username)
 	await page.type("[name='password']", password)
 
@@ -171,7 +171,12 @@ async function updateStockEvents(page: Page, portfolioData: IPortfolioData): Pro
 		timeout: 30000
 	})
 
-	const dividendYield = await page.locator(".text-xs.font-semibold.inline-block").nth(2).textContent()
+	const dividendYieldLocator = page.locator(".text-xs.font-semibold.inline-block", {
+		hasText: /Yield$/g
+	})
+
+	await page.waitForTimeout(3000)
+	const dividendYield = await dividendYieldLocator.textContent()
 	const parsedDividendYield = parseFloat(dividendYield?.match(/[0-9.]+/g)?.at(0) ?? "")
 
 	for (const position of portfolioData.positions) {
@@ -300,11 +305,13 @@ async function writeToSheets(portfolioData: IPortfolioData) {
 		})
 	}
 
+	console.log(portfolioData.dividendYield)
+
 	// update portfolio dividend yield
 	await spreadsheets.values.update({
 		spreadsheetId,
 		range: "B16",
-		valueInputOption: "USER_ENTERED",
+		valueInputOption: "RAW",
 		requestBody: {
 			values: [[portfolioData.dividendYield]]
 		}
