@@ -1,7 +1,8 @@
 # Node
 node_modules
 
-# T212 data
+# Data
+*.png
 config.env
 portfolioData.json
 
@@ -10,3 +11,9 @@ dist
 
 # Security
 credentials.json
+
+# AWS
+*_accessKeys.csv
+
+# deployment
+deploy/.terraform
