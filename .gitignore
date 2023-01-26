@@ -14,6 +14,7 @@ credentials.json
 
 # AWS
 *_accessKeys.csv
+*.zip
 
 # deployment
 deploy/.terraform
