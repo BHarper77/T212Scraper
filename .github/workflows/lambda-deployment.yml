@@ -25,13 +25,15 @@ jobs:
           name: "credentials.json"
           json: ${{ secrets.GCP_CREDENTIALS }}
       - name: Terraform fmt
-        run: terraform fmt
+        run: |
+          cd deploy
+          terraform fmt
       - name: Terraform init
         run: terraform init
       - name: Terraform Validate
         run: terraform validate
       - name: Terraform Apply
-        run: terraform apply
+        run: terraform apply -auto-approve
       - name: Install dependencies
         run: npm ci
       - name: Deploy to Lambda
