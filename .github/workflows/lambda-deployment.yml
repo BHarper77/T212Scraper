@@ -29,11 +29,17 @@ jobs:
           cd deploy
           terraform fmt
       - name: Terraform init
-        run: terraform init
+        run: |
+          cd deploy
+          terraform init
       - name: Terraform Validate
-        run: terraform validate
+        run: |
+          cd deploy        
+          terraform validate
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: |
+          cd deploy
+          terraform apply -auto-approve
       - name: Install dependencies
         run: npm ci
       - name: Deploy to Lambda
