@@ -29,7 +29,10 @@ jobs:
       - name: Build app
         run: |
           npm run build
-          zip -j deployment.zip ./dist/*
+          mkdir deployment
+          cp -r node_modules/ deployment/
+          cp -r dist/* deployment/
+          zip -r deployment.zip ./deployment/*
       - name: Terraform fmt
         run: |
           cd deploy
