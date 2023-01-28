@@ -34,11 +34,11 @@ resource "aws_iam_role" "iam_for_lambda" {
 resource "aws_lambda_function" "T212Scraper" {
   role             = aws_iam_role.iam_for_lambda.arn
   description      = "A web scraper that scrapes data from Trading 212 and writes to Stock Events and Google Sheets"
-  filename         = "../dist.zip"
+  filename         = "../deployment.zip"
   function_name    = "T212Scraper"
-  handler          = "../dist/src/lambda.handler"
+  handler          = "../deployment/src/lambda.handler"
   runtime          = "nodejs18.x"
-  source_code_hash = filebase64sha256("../dist.zip")
+  source_code_hash = filebase64sha256("../deployment.zip")
   timeout          = 600
 
   tags = {
