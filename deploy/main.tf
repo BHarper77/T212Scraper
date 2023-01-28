@@ -47,9 +47,9 @@ resource "aws_lambda_function" "T212Scraper" {
 }
 
 resource "aws_lambda_layer_version" "chromium" {
-  filename         = "./lambda_layer_chromium.zip"
+  filename         = "../lambda_layer_chromium.zip"
   layer_name       = "chromium"
-  source_code_hash = filebase64sha256("./lambda_layer_chromium.zip")
+  source_code_hash = filebase64sha256("../lambda_layer_chromium.zip")
 
   compatible_runtimes = ["nodejs18.x"]
 }
