@@ -29,7 +29,7 @@ jobs:
       - name: Create Chromium Lambda layer
         run: |
           mkdir -p deploy/lambda_layer_chromium/node_modules
-          mv -r ./node_modules/playwright-aws-lambda deploy/lambda_layer_chromium/node_modules
+          mv ./node_modules/playwright-aws-lambda deploy/lambda_layer_chromium/node_modules
           zip -r lambda_layer_chromium.zip ./deploy/lambda_layer_chromium/*
       - name: Build Lambda deployment package
         run: |
