@@ -40,6 +40,7 @@ resource "aws_lambda_function" "T212Scraper" {
   runtime          = "nodejs18.x"
   source_code_hash = filebase64sha256("../deployment.zip")
   timeout          = 600
+  layers           = [aws_lambda_layer_version.chromium.arn]
 
   tags = {
     Name = "T212Scraper"
