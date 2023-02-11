@@ -2,17 +2,16 @@ import dotenv from "dotenv"
 import { writeFile } from "fs/promises"
 import { google } from "googleapis"
 import { join } from "path"
-import { chromium, Page } from "playwright"
+import type { Page } from "playwright"
+import { chromium } from "playwright"
 import credentials from "../credentials.json"
-import { IPortfolioData } from "./models/IPortfolioData"
-import { IPosition } from "./models/IPosition"
+import type { IPortfolioData } from "./models/IPortfolioData"
+import type { IPosition } from "./models/IPosition"
 import staticData from "./static.json"
+import { MailService } from "@sendgrid/mail"
 
 export async function handler() {
-	// if running in Lambda, load env vars here
-	if (process.env.NODE_ENV !== "local") {
-		dotenv.config({ path: join(__dirname, "..", "config.env") })
-	}
+	dotenv.config({ path: join(__dirname, "..", "config.env") })
 
 	const { T212USERNAME: username, T212PASSWORD: password } = process.env
 
@@ -21,13 +20,29 @@ export async function handler() {
 	}
 
 	await scrapeData(username, password)
-		.catch((error) => console.log(`Error scraping portfolio data: ${error}`))
+		.catch(async (error) => {
+			if (process.env.NODE_ENV === "local") {
+				console.log({ error })
+				return
+			}
+
+			const sendGrid = new MailService()
+			sendGrid.setApiKey(process.env.SENDGRID_API_KEY ?? "")
+		
+			await sendGrid.send({
+				to: "bradyharper11@googlemail.com",
+				from: "bradyharper11@googlemail.com",
+				subject: "T212Scraper",
+				text: "Error running T212Scraper on Lambda",
+				html: `<body>${error}</body>`,
+			})
+		})
 }
 
 async function scrapeData(username: string, password: string): Promise<IPortfolioData> {
 	console.log("Scraping T212")
 	const browser = await chromium.launch({ 
-		headless: process.env.NODE_ENV !== "local",
+		headless: false,
 		slowMo: 100
 	})
 
@@ -165,8 +180,24 @@ async function updateStockEvents(page: Page, portfolioData: IPortfolioData): Pro
 	await page.locator(".bg-white.p-4.shadow-card.rounded-md").scrollIntoViewIfNeeded()
 	console.log("Waiting for user input. Scan QR code with Stock Events app")
 
-	// TODO: send screenshot to personal email
-	await page.screenshot({ path: "./qrCode.png" })
+	const qrCodeImage = "./qrCode.png"
+	const imageBuffer = await page.screenshot({ path: qrCodeImage })
+
+	const sendGrid = new MailService()
+
+	sendGrid.setApiKey(process.env.SENDGRID_API_KEY ?? "")
+
+	await sendGrid.send({
+		to: "bradyharper11@googlemail.com",
+		from: "bradyharper11@googlemail.com",
+		subject: "T212Scraper",
+		text: "Awaiting QR code scan",
+		attachments: [{
+			filename: qrCodeImage,
+			type: "image/png",
+			content: imageBuffer.toString("base64")
+		}]
+	})
 
 	await page.waitForFunction(() => window.location.href === "https://stockevents.app/for-you", null, {
 		timeout: 30000
