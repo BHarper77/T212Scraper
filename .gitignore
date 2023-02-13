@@ -11,6 +11,7 @@ dist
 
 # Security
 credentials.json
+secrets.env
 
 # AWS
 *_accessKeys.csv
@@ -19,5 +20,5 @@ credentials.json
 # deployment
 deploy/.terraform
 deploy/lambda_layer_chromium
-deploy/terraforfm.tfstate
-deploy/terraforfm.tfstate.backup
+deploy/terraform.tfstate
+deploy/terraform.tfstate.backup

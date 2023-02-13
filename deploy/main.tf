@@ -5,6 +5,11 @@ terraform {
       version = "~> 4.16"
     }
   }
+  backend "s3" {
+    bucket = "TerraformState"
+    key    = "terraform/T212Scraper.tfstate"
+    region = "ew-west-1"
+  }
 
   required_version = ">= 1.2.0"
 }
