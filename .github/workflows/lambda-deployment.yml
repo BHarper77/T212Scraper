@@ -38,21 +38,12 @@ jobs:
           cp -r node_modules/ deployment/
           cp -r dist/* deployment/
           zip -r deployment.zip ./deployment/*
-      - name: Terraform fmt
+      - name: Terraform
         run: |
           cd deploy
           terraform fmt
-      - name: Terraform init
-        run: |
-          cd deploy
           terraform init
-      - name: Terraform Validate
-        run: |
-          cd deploy        
           terraform validate
-      - name: Terraform Apply
-        run: |
-          cd deploy
           terraform apply -auto-approve
       - name: Deploy to Lambda
         run: aws lambda update-function-code --function-name=T212Scraper --zip-file=fileb://deployment.zip
