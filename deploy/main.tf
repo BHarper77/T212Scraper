@@ -6,9 +6,9 @@ terraform {
     }
   }
   backend "s3" {
-    bucket = "TerraformState"
-    key    = "terraform/T212Scraper.tfstate"
-    region = "ew-west-1"
+    bucket = "t212scraper"
+    key    = "terraform.tfstate"
+    region = "eu-west-1"
   }
 
   required_version = ">= 1.2.0"
@@ -58,4 +58,8 @@ resource "aws_lambda_layer_version" "chromium" {
   source_code_hash = filebase64sha256("../lambda_layer_chromium.zip")
 
   compatible_runtimes = ["nodejs18.x"]
+}
+
+resource "aws_s3_bucket" "t212scraper" {
+  bucket = "t212scraper"
 }

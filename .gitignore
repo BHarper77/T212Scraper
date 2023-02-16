@@ -22,3 +22,4 @@ deploy/.terraform
 deploy/lambda_layer_chromium
 deploy/terraform.tfstate
 deploy/terraform.tfstate.backup
+deployment/
