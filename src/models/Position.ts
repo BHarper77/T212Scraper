@@ -1,4 +1,4 @@
-export interface IPosition {
+export type Position = {
 	name: string
 	ticker: string
 	totalValue: number

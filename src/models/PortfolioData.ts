@@ -1,11 +1,11 @@
-import { IPosition } from "./IPosition"
+import type { Position } from "./Position"
 
-export interface IPortfolioData {
+export type PortfolioData = {
 	totalValue: number
 	totalInvested: number
 	totalReturn: number
 	percentageReturn: number
 	dividendYield: number
 	totalInvestments: number
-	positions: IPosition[]
+	positions: Position[]
 }
