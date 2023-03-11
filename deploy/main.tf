@@ -39,11 +39,11 @@ resource "aws_iam_role" "iam_for_lambda" {
 resource "aws_lambda_function" "T212Scraper" {
   role             = aws_iam_role.iam_for_lambda.arn
   description      = "A web scraper that scrapes data from Trading 212 and writes to Stock Events and Google Sheets"
-  filename         = "../deployment.zip"
+  filename         = "../.serverless/t212scraper.zip"
   function_name    = "T212Scraper"
-  handler          = "../deployment/src/lambda.handler"
+  handler          = "../.serverless/src/lambda.handler"
   runtime          = "nodejs18.x"
-  source_code_hash = filebase64sha256("../deployment.zip")
+  source_code_hash = filebase64sha256("../.serverless/t212scraper.zip")
   timeout          = 600
   layers           = [aws_lambda_layer_version.chromium.arn]
 
@@ -53,9 +53,9 @@ resource "aws_lambda_function" "T212Scraper" {
 }
 
 resource "aws_lambda_layer_version" "chromium" {
-  filename         = "../lambda_layer_chromium.zip"
+  filename         = "../layers/node_modules.zip"
   layer_name       = "chromium"
-  source_code_hash = filebase64sha256("../lambda_layer_chromium.zip")
+  source_code_hash = filebase64sha256("../layers/node_modules.zip")
 
   compatible_runtimes = ["nodejs18.x"]
 }

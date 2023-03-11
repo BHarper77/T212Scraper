@@ -6,10 +6,6 @@ provider:
 plugins:
   - serverless-esbuild
   - serverless-offline
-layers:
-  dependencies:
-    package:
-      artifact: layers/node_modules.zip
 package:
   exclude:
     - node_modules/**
