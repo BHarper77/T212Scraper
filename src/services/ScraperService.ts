@@ -1,5 +1,4 @@
 import type { Browser, Page } from "playwright"
-import { chromium } from "playwright"
 import staticData from "../static.json"
 import type { MailService } from "./MailService"
 import type { PortfolioData } from "../models/PortfolioData"
@@ -8,6 +7,7 @@ import { Config } from "../models/Config"
 import { rm } from "fs/promises"
 import { join } from "path"
 import { readdir } from "fs/promises"
+import { launchChromium } from "playwright-aws-lambda"
 
 export class ScraperService {
 	private readonly _mailService: MailService
@@ -18,14 +18,15 @@ export class ScraperService {
 
 	/** Scrapes T212 and updates Stock events */
 	async scrape() {
-		const browser = await chromium.launch({ 
+		// page and browser type casts for playwright-aws-lambda
+		const browser = await launchChromium({ 
 			headless: false,
 			slowMo: 100,
 			tracesDir: "./traces/"
-		})
+		}) as Browser
 
 		await browser.startTracing()
-		const page = await browser.newPage()
+		const page = await browser.newPage() as Page
 
 		let portfolioData: PortfolioData
 
