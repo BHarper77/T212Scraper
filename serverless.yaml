@@ -1,0 +1,19 @@
+service: t212scraper
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-west-1
+plugins:
+  - serverless-esbuild
+  - serverless-offline
+layers:
+  dependencies:
+    package:
+      artifact: layers/node_modules.zip
+package:
+  exclude:
+    - node_modules/**
+    - layers/**
+functions:
+  t212scraper:
+    handler: ./src/lambda.handler

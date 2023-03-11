@@ -9,7 +9,8 @@
 	"scripts": {
 		"start": "set NODE_ENV=local&&ts-node src/app.ts",
 		"build": "tsc -b .",
-		"clean": "npx --yes rimraf dist"
+		"clean": "npx --yes rimraf dist",
+		"package": "serverless package"
 	},
 	"author": "",
 	"license": "ISC",
@@ -27,6 +28,7 @@
 		"googleapis": "^102.0.0",
 		"playwright": "^1.30.0",
 		"playwright-aws-lambda": "^0.9.0",
+		"playwright-core": "^1.31.2",
 		"serverless": "^3.27.0"
 	}
 }

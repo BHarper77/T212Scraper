@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
-          node-version: "16"
+          node-version: "18"
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -26,18 +26,12 @@ jobs:
           json: ${{ secrets.GCP_CREDENTIALS }}
       - name: Install dependencies
         run: npm ci
-      - name: Create Chromium Lambda layer
+      - name: Run Lambda pre-script
         run: |
-          mkdir -p deploy/lambda_layer_chromium/node_modules
-          mv ./node_modules/playwright-aws-lambda deploy/lambda_layer_chromium/node_modules
-          zip -r lambda_layer_chromium.zip ./deploy/lambda_layer_chromium/*
+          ./deploy/lambda.sh
       - name: Build Lambda deployment package
         run: |
-          npm run build
-          mkdir deployment
-          cp -r node_modules/ deployment/
-          cp -r dist/* deployment/
-          zip -r deployment.zip ./deployment/*
+          npm run package
       - name: Terraform
         run: |
           cd deploy
@@ -45,5 +39,3 @@ jobs:
           terraform init
           terraform validate
           terraform apply -auto-approve
-      - name: Deploy to Lambda
-        run: aws lambda update-function-code --function-name=T212Scraper --zip-file=fileb://deployment.zip
