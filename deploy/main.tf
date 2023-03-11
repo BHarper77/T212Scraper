@@ -45,17 +45,25 @@ resource "aws_lambda_function" "T212Scraper" {
   runtime          = "nodejs18.x"
   source_code_hash = filebase64sha256("../.serverless/t212scraper.zip")
   timeout          = 600
-  layers           = [aws_lambda_layer_version.chromium.arn]
+  layers           = [aws_lambda_layer_version.chromium.arn, aws_lambda_layer_version.dependencies.arn]
 
   tags = {
     Name = "T212Scraper"
   }
 }
 
-resource "aws_lambda_layer_version" "chromium" {
+resource "aws_lambda_layer_version" "dependencies" {
   filename         = "../layers/node_modules.zip"
-  layer_name       = "chromium"
+  layer_name       = "dependencies"
   source_code_hash = filebase64sha256("../layers/node_modules.zip")
+
+  compatible_runtimes = ["nodejs18.x"]
+}
+
+resource "aws_lambda_layer_version" "chromium" {
+  filename         = "../layers/chromium.zip"
+  layer_name       = "chromium"
+  source_code_hash = filebase64sha256("../layers/chromium.zip")
 
   compatible_runtimes = ["nodejs18.x"]
 }
