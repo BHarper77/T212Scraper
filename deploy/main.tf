@@ -36,6 +36,10 @@ resource "aws_iam_role" "iam_for_lambda" {
   })
 }
 
+resource "aws_s3_bucket" "t212scraper" {
+  bucket = "t212scraper"
+}
+
 resource "aws_lambda_function" "T212Scraper" {
   role             = aws_iam_role.iam_for_lambda.arn
   description      = "A web scraper that scrapes data from Trading 212 and writes to Stock Events and Google Sheets"
@@ -44,7 +48,7 @@ resource "aws_lambda_function" "T212Scraper" {
   runtime          = "nodejs18.x"
   source_code_hash = filebase64sha256("../.serverless/t212scraper.zip")
   timeout          = 600
-  s3_bucket        = aws_s3_bucket.t212scraper.arn
+  s3_bucket        = aws_s3_bucket.t212scraper.bucket
   s3_key           = "deploymentPackage.zip"
 
   tags = {
@@ -52,12 +56,9 @@ resource "aws_lambda_function" "T212Scraper" {
   }
 }
 
-resource "aws_s3_bucket" "t212scraper" {
-  bucket = "t212scraper"
-}
 
 resource "aws_s3_object" "object" {
-  bucket = aws_s3_bucket.t212scraper.arn
+  bucket = aws_s3_bucket.t212scraper.bucket
   key    = "deploymentPackage.zip"
   source = "../.serverless/t212scraper.zip"
   etag   = filemd5("../.serverless/t212scraper.zip")
