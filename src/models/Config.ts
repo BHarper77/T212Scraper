@@ -6,7 +6,8 @@ export class Config {
 	static t212Credentials: { 
 		username: string
 		password: string 
-	}
+	// initialise with empty strings to avoid undefined references in `init()`
+	} = { username: "", password: "" }
 
 	static init() {
 		dotenv.config({ path: join(__dirname, "..", "..", "config.env") })

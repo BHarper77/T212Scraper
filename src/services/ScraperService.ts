@@ -17,7 +17,8 @@ export class ScraperService {
 	async scrape() {
 		const browser = await playwright.launch({ 
 			headless: false,
-			executablePath: await chromium.executablePath(),
+			// only set on prod
+			executablePath: process.env.NODE_ENV === "local" ? undefined : await chromium.executablePath(),
 			slowMo: 100,
 		})
 
