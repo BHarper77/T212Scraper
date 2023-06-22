@@ -6,10 +6,6 @@ provider:
 plugins:
   - serverless-esbuild
   - serverless-offline
-package:
-  exclude:
-    - node_modules/**
-    - layers/**
 functions:
   t212scraper:
     handler: ./src/lambda.handler

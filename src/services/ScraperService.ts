@@ -1,20 +1,17 @@
+import { readdir, rm } from "fs/promises"
+import { join } from "path"
 import type { Browser, Page } from "playwright"
-import staticData from "../static.json"
-import type { MailService } from "./MailService"
+import { launchChromium } from "playwright-aws-lambda"
+import { Config } from "../models/Config"
 import type { PortfolioData } from "../models/PortfolioData"
 import type { Position } from "../models/Position"
-import { Config } from "../models/Config"
-import { rm } from "fs/promises"
-import { join } from "path"
-import { readdir } from "fs/promises"
-import { launchChromium } from "playwright-aws-lambda"
+import staticData from "../static.json"
+import type { MailService } from "./MailService"
 
 export class ScraperService {
-	private readonly _mailService: MailService
-
-	constructor(mailService: MailService) {
-		this._mailService = mailService
-	}
+	constructor(
+		private readonly _mailService: MailService
+	) {}
 
 	/** Scrapes T212 and updates Stock events */
 	async scrape() {
@@ -31,12 +28,13 @@ export class ScraperService {
 		let portfolioData: PortfolioData
 
 		try {
-			const partialPortfolioData = await this._t212(page)
-			portfolioData = await this._stockEvents(page, partialPortfolioData)
+			const partialPortfolioData = await this._scrapeT212(page)
+			portfolioData = await this._scrapeStockEvents(page, partialPortfolioData)
 		}
 		catch (error) {
 			await page.screenshot({ path: "error.png" })
 		}
+		
 		// TODO: if response contains errors, write trace to s3 and send email report
 
 		// cleanup - delete qrCode.png
@@ -46,7 +44,7 @@ export class ScraperService {
 		return portfolioData
 	}
 
-	private async _t212(page: Page): Promise<Omit<PortfolioData, "dividendYield">> {
+	private async _scrapeT212(page: Page): Promise<PartialPortfolioData> {
 		console.log("Scraping T212")
 	
 		const { username, password } = Config.t212Credentials
@@ -169,7 +167,7 @@ export class ScraperService {
 		return portfolioData
 	}
 
-	private async _stockEvents(page: Page, portfolioData: Omit<PortfolioData, "dividendYield">): Promise<PortfolioData> {
+	private async _scrapeStockEvents(page: Page, portfolioData: PartialPortfolioData): Promise<PortfolioData> {
 		console.log("Scraping Stock Events")
 	
 		await page.goto("https://stockevents.app/for-you", {
@@ -275,3 +273,5 @@ export class ScraperService {
 		}
 	}
 }
+
+type PartialPortfolioData = Omit<PortfolioData, "dividendYield">

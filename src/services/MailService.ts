@@ -1,10 +1,11 @@
 import { MailService as SendGridMail } from "@sendgrid/mail"
+import { Config } from "../models/Config"
 
 export class MailService {
-	private readonly _sendGrid: SendGridMail = new SendGridMail()
+	private readonly _sendGrid = new SendGridMail()
 
-	constructor(apiKey: string) {
-		this._sendGrid.setApiKey(apiKey)
+	constructor() {
+		this._sendGrid.setApiKey(Config.sendGridApiKey)
 	}
 
 	async sendQrCode(path: string, imageBuffer: Buffer) {

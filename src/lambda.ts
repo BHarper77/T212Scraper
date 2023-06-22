@@ -1,24 +1,25 @@
-import credentials from "../credentials.json"
 import { google } from "googleapis"
-import { MailService } from "./services/MailService"
-import type { PortfolioData } from "./models/PortfolioData"
+import credentials from "../credentials.json"
 import { Config } from "./models/Config"
+import type { PortfolioData } from "./models/PortfolioData"
+import { MailService } from "./services/MailService"
 import { ScraperService } from "./services/ScraperService"
 
 export class Handler {
 	private readonly _mailService: MailService
+	private readonly _scraper: ScraperService
 	// TODO: implement report
 	// send email including current portfolio state and errors
 	// private readonly _report: any
 
 	constructor() {
 		Config.init()
-		this._mailService = new MailService(Config.sendGridApiKey)
+		this._mailService = new MailService()
+		this._scraper = new ScraperService(this._mailService)
 	}
 	
 	async wrapper() {
-		const scraper = new ScraperService(this._mailService)
-		const portfolioData = await scraper.scrape()
+		const portfolioData = await this._scraper.scrape()
 		console.log({ portfolioData })
 	
 		await this.writeToSheets(portfolioData)
