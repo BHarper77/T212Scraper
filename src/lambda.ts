@@ -10,6 +10,8 @@ export class Handler {
 	private readonly _scraper: ScraperService
 	// TODO: implement report
 	// send email including current portfolio state and errors
+	// use https://react.email/ to build email
+	// use https://resend.com/ to send email
 	// private readonly _report: any
 
 	constructor() {
