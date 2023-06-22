@@ -1,12 +1,12 @@
-import { readdir, rm } from "fs/promises"
-import { join } from "path"
-import type { Browser, Page } from "playwright"
-import { launchChromium } from "playwright-aws-lambda"
-import { Config } from "../models/Config"
-import type { PortfolioData } from "../models/PortfolioData"
-import type { Position } from "../models/Position"
-import staticData from "../static.json"
-import type { MailService } from "./MailService"
+import chromium from "@sparticuz/chromium";
+import { readdir, rm } from "fs/promises";
+import { join } from "path";
+import { Browser, Page, chromium as playwright } from "playwright";
+import { Config } from "../models/Config";
+import type { PortfolioData } from "../models/PortfolioData";
+import type { Position } from "../models/Position";
+import staticData from "../static.json";
+import type { MailService } from "./MailService";
 
 export class ScraperService {
 	constructor(
@@ -15,15 +15,13 @@ export class ScraperService {
 
 	/** Scrapes T212 and updates Stock events */
 	async scrape() {
-		// page and browser type casts for playwright-aws-lambda
-		const browser = await launchChromium({ 
+		const browser = await playwright.launch({ 
 			headless: false,
+			executablePath: await chromium.executablePath(),
 			slowMo: 100,
-			tracesDir: "./traces/"
-		}) as Browser
+		})
 
-		await browser.startTracing()
-		const page = await browser.newPage() as Page
+		const page = await browser.newPage()
 
 		let portfolioData: PortfolioData
 
@@ -259,7 +257,6 @@ export class ScraperService {
 
 	private async _cleanup(page: Page, browser: Browser) {
 		console.log("Cleaning up")
-		await browser.stopTracing()
 		await page.close()
 		await browser.close()
 
