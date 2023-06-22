@@ -40,6 +40,13 @@ resource "aws_s3_bucket" "t212scraper" {
   bucket = "t212scraper"
 }
 
+resource "aws_s3_object" "object" {
+  bucket = aws_s3_bucket.t212scraper.bucket
+  key    = "deploymentPackage.zip"
+  source = "../.serverless/t212scraper.zip"
+  etag   = filemd5("../.serverless/t212scraper.zip")
+}
+
 resource "aws_lambda_function" "T212Scraper" {
   role             = aws_iam_role.iam_for_lambda.arn
   description      = "A web scraper that scrapes data from Trading 212 and writes to Stock Events and Google Sheets"
@@ -54,12 +61,4 @@ resource "aws_lambda_function" "T212Scraper" {
   tags = {
     Name = "T212Scraper"
   }
-}
-
-
-resource "aws_s3_object" "object" {
-  bucket = aws_s3_bucket.t212scraper.bucket
-  key    = "deploymentPackage.zip"
-  source = "../.serverless/t212scraper.zip"
-  etag   = filemd5("../.serverless/t212scraper.zip")
 }
