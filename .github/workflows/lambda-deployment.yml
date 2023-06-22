@@ -26,9 +26,6 @@ jobs:
           json: ${{ secrets.GCP_CREDENTIALS }}
       - name: Install dependencies
         run: npm ci
-      - name: Run Lambda pre-script
-        run: |
-          ./deploy/lambda.sh
       - name: Build Lambda deployment package
         run: |
           npm run package
