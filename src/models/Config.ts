@@ -2,7 +2,7 @@ import dotenv from "dotenv"
 import { join } from "path"
 
 export class Config {
-	static sendGridApiKey: string
+	static resendApiKey: string
 	static t212Credentials: { 
 		username: string
 		password: string 
@@ -12,11 +12,11 @@ export class Config {
 	static init() {
 		dotenv.config({ path: join(__dirname, "..", "..", "config.env") })
 
-		if (process.env.SENDGRID_API_KEY === undefined) {
+		if (process.env.RESEND_API_KEY === undefined) {
 			throw new Error("SENDGRID_API_KEY_undefined")
 		}
 		else {
-			this.sendGridApiKey = process.env.SENDGRID_API_KEY
+			this.resendApiKey = process.env.RESEND_API_KEY
 		}
 
 		if (process.env.T212USERNAME === undefined) {

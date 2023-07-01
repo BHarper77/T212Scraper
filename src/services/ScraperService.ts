@@ -1,6 +1,4 @@
 import chromium from "@sparticuz/chromium";
-import { readdir, rm } from "fs/promises";
-import { join } from "path";
 import { Browser, Page, chromium as playwright } from "playwright";
 import { Config } from "../models/Config";
 import type { PortfolioData } from "../models/PortfolioData";
@@ -36,7 +34,6 @@ export class ScraperService {
 		
 		// TODO: if response contains errors, write trace to s3 and send email report
 
-		// cleanup - delete qrCode.png
 		await this._cleanup(page, browser)
 
 		// @ts-ignore
@@ -176,10 +173,8 @@ export class ScraperService {
 		// scroll QR code into view and wait for user input
 		await page.locator(".bg-white.p-4.shadow-card.rounded-md").scrollIntoViewIfNeeded()
 	
-		const imageFilepath = "./qrCode.png"
-		const imageBuffer = await page.screenshot({ path: imageFilepath })
-	
-		await this._mailService.sendQrCode(imageFilepath, imageBuffer)
+		const imageBuffer = await page.screenshot()
+		await this._mailService.sendQrCode(imageBuffer)
 	
 		console.log("Waiting for QR code to be scanned")
 	
@@ -260,15 +255,6 @@ export class ScraperService {
 		console.log("Cleaning up")
 		await page.close()
 		await browser.close()
-
-		const fileRegex = /[a-zA-Z0-9]+\.png/g
-
-		const files = await readdir(join(__dirname, "..", ".."))
-		const filesToRemove = files.filter(file => fileRegex.test(file))
-
-		for (const file of filesToRemove) {
-			await rm(file)
-		}
 	}
 }
 

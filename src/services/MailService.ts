@@ -1,24 +1,26 @@
-import { MailService as SendGridMail } from "@sendgrid/mail"
-import { Config } from "../models/Config"
+import { Resend } from 'resend';
+import { Config } from '../models/Config';
 
 export class MailService {
-	private readonly _sendGrid = new SendGridMail()
+	private readonly _resend = new Resend(Config.resendApiKey)
 
-	constructor() {
-		this._sendGrid.setApiKey(Config.sendGridApiKey)
-	}
-
-	async sendQrCode(path: string, imageBuffer: Buffer) {
-		await this._sendGrid.send({
-			to: "bradyharper11@googlemail.com",
-			from: "bradyharper11@googlemail.com",
-			subject: "T212Scraper",
-			text: "Awaiting QR code scan",
-			attachments: [{
-				filename: path,
-				type: "image/png",
-				content: imageBuffer.toString("base64")
-			}]
-		})
+	async sendQrCode(imageBuffer: Buffer) {
+		try {
+			const data = await this._resend.emails.send({
+				to: "bradyharper11@googlemail.com",
+				from: 'T212Scraper <onboarding@resend.dev>',
+				subject: "T212Scraper QR Code",
+				text: "Awaiting QR code scan",
+				attachments: [{
+					filename: "qrCode.png",
+					content: imageBuffer
+				}]
+			})
+	
+			console.log({ data })
+		} 
+		catch (error) {
+			console.log({ error })
+		}
 	}
 }
