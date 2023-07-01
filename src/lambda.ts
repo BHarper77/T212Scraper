@@ -25,6 +25,7 @@ export class Handler {
 		console.log({ portfolioData })
 	
 		await this.writeToSheets(portfolioData)
+		await this._mailService.sendSuccessEmail(portfolioData)
 	}
 
 	async writeToSheets(portfolioData: PortfolioData) {

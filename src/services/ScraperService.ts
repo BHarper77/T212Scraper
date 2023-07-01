@@ -16,7 +16,7 @@ export class ScraperService {
 		const browser = await playwright.launch({ 
 			headless: false,
 			// only set on prod
-			executablePath: process.env.NODE_ENV === "local" ? undefined : await chromium.executablePath(),
+			executablePath: Config.getEnv() === "local" ? undefined : await chromium.executablePath(),
 			slowMo: 100,
 		})
 
@@ -251,6 +251,7 @@ export class ScraperService {
 		}
 	}
 
+	/** Cleanup browser artifacts */
 	private async _cleanup(page: Page, browser: Browser) {
 		console.log("Cleaning up")
 		await page.close()

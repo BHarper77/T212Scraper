@@ -33,4 +33,8 @@ export class Config {
 			this.t212Credentials.password = process.env.T212PASSWORD
 		}
 	}
+
+	static getEnv() {
+		return process.env.NODE_ENV === "local" ? "local" : "prod"
+	}
 }
