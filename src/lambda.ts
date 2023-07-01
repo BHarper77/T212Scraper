@@ -11,7 +11,6 @@ export class Handler {
 	// TODO: implement report
 	// send email including current portfolio state and errors
 	// use https://react.email/ to build email
-	// use https://resend.com/ to send email
 	// private readonly _report: any
 
 	constructor() {
@@ -22,7 +21,6 @@ export class Handler {
 	
 	async wrapper() {
 		const portfolioData = await this._scraper.scrape()
-		console.log({ portfolioData })
 	
 		await this.writeToSheets(portfolioData)
 		await this._mailService.sendSuccessEmail(portfolioData)

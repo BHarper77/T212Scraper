@@ -29,7 +29,7 @@ export class ScraperService {
 			portfolioData = await this._scrapeStockEvents(page, partialPortfolioData)
 		}
 		catch (error) {
-			await page.screenshot({ path: "error.png" })
+			await this._mailService.sendErrorEmail(error as Error)
 		}
 		
 		// TODO: if response contains errors, write trace to s3 and send email report
@@ -179,7 +179,8 @@ export class ScraperService {
 		console.log("Waiting for QR code to be scanned")
 	
 		await page.waitForFunction(() => window.location.href === "https://stockevents.app/for-you", null, {
-			timeout: 30000
+			// 2 minute timeout waiting for QR code to be scanned via email
+			timeout: 120000
 		}).catch(async (stockEventsError) => {
 			console.log({ stockEventsError })
 			await page.reload({
@@ -188,7 +189,6 @@ export class ScraperService {
 		})
 	
 		console.log("Successfully logged in")
-		await page.screenshot({ path: "login.png" })
 
 		const dividendYieldLocator = page.locator(".text-xs.font-semibold.inline-block", {
 			hasText: /Yield$/g
