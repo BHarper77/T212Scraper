@@ -34,7 +34,7 @@ resource "aws_lambda_function" "T212Scraper" {
   role             = aws_iam_role.t212scraper_role.arn
   description      = "A web scraper that scrapes data from Trading 212 and writes to Stock Events and Google Sheets"
   function_name    = "T212Scraper"
-  handler          = "../.serverless/src/lambda.handler"
+  handler          = "src/lambda.handler"
   runtime          = "nodejs18.x"
   source_code_hash = filebase64sha256("../.serverless/t212scraper.zip")
   timeout          = 600
