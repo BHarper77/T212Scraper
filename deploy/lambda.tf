@@ -41,6 +41,8 @@ resource "aws_lambda_function" "T212Scraper" {
   s3_bucket        = aws_s3_bucket.t212scraper.bucket
   s3_key           = "deploymentPackage.zip"
 
+  depends_on = [aws_s3_object.deployment_package]
+
   tags = {
     Name = "T212Scraper"
   }
