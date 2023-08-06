@@ -9,3 +9,6 @@ plugins:
 functions:
   t212scraper:
     handler: ./src/lambda.handler
+    package:
+      patterns:
+        - "config.env"
