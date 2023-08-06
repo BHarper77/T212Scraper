@@ -13,21 +13,21 @@ export class Config {
 		dotenv.config({ path: join(__dirname, "..", "..", "config.env") })
 
 		if (process.env.RESEND_API_KEY === undefined) {
-			throw new Error("SENDGRID_API_KEY_undefined")
+			throw new Error("`RESEND_API_KEY` undefined")
 		}
 		else {
 			this.resendApiKey = process.env.RESEND_API_KEY
 		}
 
 		if (process.env.T212USERNAME === undefined) {
-			throw new Error("T212USERNAME_undefined")
+			throw new Error("`T212USERNAME` undefined")
 		}
 		else {
 			this.t212Credentials.username = process.env.T212USERNAME
 		}
 
 		if (process.env.T212PASSWORD === undefined) {
-			throw new Error("T212PASSWORD_undefined")
+			throw new Error("`T212PASSWORD` undefined")
 		}
 		else {
 			this.t212Credentials.password = process.env.T212PASSWORD

@@ -24,11 +24,12 @@ jobs:
         with:
           name: "credentials.json"
           json: ${{ secrets.GCP_CREDENTIALS }}
+      - name: Write config to env file
+        run: echo "${{ secrets.CONFIG_ENV }}" > config.env
       - name: Install dependencies
         run: npm ci
       - name: Build Lambda deployment package
-        run: |
-          npm run package
+        run: npm run package
       - name: Terraform
         run: |
           cd deploy
