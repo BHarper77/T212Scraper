@@ -14,7 +14,7 @@ export class ScraperService {
 	/** Scrapes T212 and updates Stock events */
 	async scrape() {
 		const browser = await playwright.launch({ 
-			headless: false,
+			headless: Config.getEnv() === "local" ? false : true,
 			// only set on prod
 			executablePath: Config.getEnv() === "local" ? undefined : await chromium.executablePath(),
 			slowMo: 100,
